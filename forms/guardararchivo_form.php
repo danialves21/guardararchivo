@@ -19,7 +19,8 @@ class guardararchivo_subirarchivo_form extends moodleform {
 		//filepicker
 		$mform->addElement('filepicker', 'userfile', "Subir el archivo");
 		$mform->setType('userfile', PARAM_FILE);
-		$mform->addRule('userfile', "Por favor suba un archivo antes de continuar", 'required', null, 'client');		
+		$mform->addRule('userfile', "Por favor suba un archivo antes de continuar", 'required', null, 'client');
+		$mform->addElement('hidden', 'action', "addfiles");
 			
 		//buttons
 		$this->add_action_buttons(true, 'Subir'); //Siempre con this!

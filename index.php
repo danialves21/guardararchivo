@@ -2,34 +2,43 @@
 // Funciones
 require_once(dirname(__FILE__) . '/../../config.php');
 require_once($CFG->dirroot . "/local/guardararchivo/forms/guardararchivo_form.php");
+require_once ($CFG->dirroot . "/repository/lib.php");
 global $PAGE, $CFG, $OUTPUT, $DB, $USER;
+
+$action = optional_param("action","viewfiles",PARAM_TEXT);
+
+
 require_login();
 if (isguestuser()) {
 	die();
 }
 
 // Construcción de la pagina en formato moodle (siempre al inicio)
-$url = new moodle_url('/local/guardararchivo/index.php');
+$url = new moodle_url("/local/guardararchivo/index.php");
 $context = context_system::instance();
 $PAGE->set_context($context);
 $PAGE->set_url($url);
-$PAGE->set_pagelayout('standard');
+$PAGE->set_pagelayout("standard");
 $title = "Subir un archivo";
 $PAGE->set_title($title);
 $PAGE->set_heading($title);
 
-echo $OUTPUT->header();
-$action = optional_param('action','viewfiles',PARAM_TEXT);
 
-if ($action == 'viewfiles') {
-	$url_add = new moodle_url('/local/guardararchivo/index.php', array('action'=> 'addfiles'));
-	echo html_writer::nonempty_tag("div", $OUTPUT->single_button($url_add,'Subir nuevo archivo'), array("align" => "middle"));
+if ($action == "viewfiles") {
+	$url_add = new moodle_url("/local/guardararchivo/index.php", array("action" => "addfiles"));
+	//botón
+	//Crea tabla
+	$newtable = new html_table();
+	//Crea titulos tabla
+	$newtable->head = array("Nombre archivo","Fecha de subida", "Fecha de edición", "Compartido", "Descargado");
+	// llenar tabla
 }
 
-if ($action == 'addfiles') {
+if ($action == "addfiles") {
 	$mform = new guardararchivo_subirarchivo_form();
+	
 	if ($mform->is_cancelled()) { //si se presiona boton cancelar
-		$home = new moodle_url('/my/');
+		$home = new moodle_url("/local/guardararchivo/index.php", array("action" => "viewfiles"));
 		redirect($home);
 	} else if ($mform->get_data()) { //se procesan datos validados
 		$data = $mform->get_data();
@@ -39,37 +48,56 @@ if ($action == 'addfiles') {
 			mkdir($path . "/unread/", 0777, true);
 		}
 		//Guardar archivo
-		$filename = $mform->get_new_filename('userfile');
-		$file = $mform->save_file('userfile', $path."/unread/".$filename,false);
+		$filename = $mform->get_new_filename("userfile");
+		$file = $mform->save_file("userfile", $path."/unread/".$filename,false);
 		$time = strtotime(date("d-m-Y H:s:i"));
 	
 		//validar que se subió bien el archivo
-		$uploadfile = $path . "/unread/".$data->filename;
+		$uploadfile = $path . "/unread/".$filename;
+		
+		$fs = get_file_storage();
 		
 		//Datos del archivo
 		$file_record = array(
-						'contextid' => $context->id,
-						'component' => 'local_guardararchivo',
-						'filearea' => 'draft',
-						'itemid' => 0,
-						'filepath' => '/',
-						'filename' => $data->filename,
-						'timecreated' => time(),
-						'timemodified' => time(),
-						'userid' => $USER->id,
-						'author' => $USER->firstname." ".$USER->lastname,
-						'license' => 'allrightsreserved'
+						"contextid" => $context->id,
+						"component" => "local_guardararchivo",
+						"filearea" => "draft",
+						"itemid" => 0,
+						"filepath" => "/",
+						"filename" => $data->filename,
+						"timecreated" => time(),
+						"timemodified" => time(),
+						"userid" => $USER->id,
+						"author" => $USER->firstname." ".$USER->lastname,
+						"license" => "allrightsreserved"
 		);
-				
+		
+		//Si el archivo ya existe, se elimina
+		if ($fs->file_exists($context->id,"local_guardararchivo", "draft", 0, "/", $data->filename)) {
+			$previousfile = $fs->get_file($context->id, "local_guardararchivo", "draft", 0, "/", $data->filename);
+			$previousfile->delete();
+		}
+		
 		//Información del nuevo archivo
 		$fileinfo = $fs->create_file_from_pathname($file_record, $uploadfile);
 
+		$action = "viewfiles";
 	}
-} 
+}
+
+echo $OUTPUT->header();
+
+if ($action == "viewfiles") {
+	//Muestra tabla
+	echo html_writer::table($newtable);
+	//botón
+	echo html_writer::nonempty_tag("div",$OUTPUT->single_button($url_add,"Subir nuevo archivo"),array("align" => "middle"));
+}
 //Muestra el formulario
-if ($action == 'addfiles') {
+if ($action == "addfiles") {
 	$mform->display();
 }
+
 
 //Siempre al final
 echo $OUTPUT->footer();
