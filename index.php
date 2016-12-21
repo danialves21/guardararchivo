@@ -23,17 +23,6 @@ $title = "Subir un archivo";
 $PAGE->set_title($title);
 $PAGE->set_heading($title);
 
-
-if ($action == "viewfiles") {
-	$url_add = new moodle_url("/local/guardararchivo/index.php", array("action" => "addfiles"));
-	//botón
-	//Crea tabla
-	$newtable = new html_table();
-	//Crea titulos tabla
-	$newtable->head = array("Nombre archivo","Fecha de subida", "Fecha de edición", "Compartido", "Descargado");
-	// llenar tabla
-}
-
 if ($action == "addfiles") {
 	$mform = new guardararchivo_subirarchivo_form();
 	
@@ -47,13 +36,17 @@ if ($action == "addfiles") {
 		if(!file_exists($path . "/unread/")) {
 			mkdir($path . "/unread/", 0777, true);
 		}
-		//Guardar archivo
+		//Obtener información de extensión
 		$filename = $mform->get_new_filename("userfile");
-		$file = $mform->save_file("userfile", $path."/unread/".$filename,false);
-		$time = strtotime(date("d-m-Y H:s:i"));
-	
+		$expldeo = explode(".",$filename);
+		$totalexp = count($expldeo);
+		$extension = $expldeo[$totalexp-1];
+		
+		//Guardar archivo con nuevo nombre
+		$file = $mform->save_file("userfile", $path."/unread/".$data->filename.".".$extension,false);
+		
 		//validar que se subió bien el archivo
-		$uploadfile = $path . "/unread/".$filename;
+		$uploadfile = $path . "/unread/".$data->filename.".".$extension;
 		
 		$fs = get_file_storage();
 		
@@ -63,8 +56,8 @@ if ($action == "addfiles") {
 						"component" => "local_guardararchivo",
 						"filearea" => "draft",
 						"itemid" => 0,
-						"filepath" => "/",
-						"filename" => $data->filename,
+						"filepath" => $path."/unread/",
+						"filename" => $data->filename.".".$extension,
 						"timecreated" => time(),
 						"timemodified" => time(),
 						"userid" => $USER->id,
@@ -73,16 +66,45 @@ if ($action == "addfiles") {
 		);
 		
 		//Si el archivo ya existe, se elimina
-		if ($fs->file_exists($context->id,"local_guardararchivo", "draft", 0, "/", $data->filename)) {
-			$previousfile = $fs->get_file($context->id, "local_guardararchivo", "draft", 0, "/", $data->filename);
+		if ($fs->file_exists($context->id,"local_guardararchivo", "draft", 0, "/", $data->filename.".".$extension)) {
+			$previousfile = $fs->get_file($context->id, "local_guardararchivo", "draft", 0, "/", $data->filename.".".$extension);
 			$previousfile->delete();
 		}
 		
 		//Información del nuevo archivo
-		$fileinfo = $fs->create_file_from_pathname($file_record, $uploadfile);
-
-		$action = "viewfiles";
+		$fileinfo = $fs->create_file_from_pathname($file_record, $uploadfile);	
+		
+		//Insertar en mdl_guardararchivo nombre archivo y user id
+		$datos = array(
+				"namearchive" => $file_record["filename"], 
+				"editiondate" => $file_record["timemodified"], 
+				"uploaddate" => $file_record["timecreated"], 
+				"status" => 1, 
+				"shared" => 0, 
+				"downloaded" => 0, 
+				"path" => $file_record["filepath"], 
+				"iduser" => $file_record["userid"]
+				
+		);
+		//echo date("F j, Y, g:i a",$datos["uploaddate"]);
+		//$DB->insert_record('guardararchivo_archivo', $datos);
+		//Cambiar valor de action
+		$action ="viewfiles";
 	}
+}
+
+
+if ($action == "viewfiles") {
+	$url_add = new moodle_url("/local/guardararchivo/index.php", array("action" => "addfiles"));
+	//Crea tabla
+	$newtable = new html_table();
+	//Crea titulos tabla
+	$newtable->head = array("Archivo","Fecha de subida", "Fecha de edición", "Compartido", "Descargado");
+	//Sacar datos base de datos
+	$DB->get_records_sql('SELECT g.namearchive, g.editiondate, g.uploaddate, g.shared, g.downloaded FROM {guardararchivo_archivo} AS g WHERE g.iduser = ?', array($USER->id));
+
+	// llenar tabla
+	
 }
 
 echo $OUTPUT->header();
@@ -91,7 +113,7 @@ if ($action == "viewfiles") {
 	//Muestra tabla
 	echo html_writer::table($newtable);
 	//botón
-	echo html_writer::nonempty_tag("div",$OUTPUT->single_button($url_add,"Subir nuevo archivo"),array("align" => "middle"));
+	echo $OUTPUT->single_button($url_add,"Subir nuevo archivo");
 }
 //Muestra el formulario
 if ($action == "addfiles") {
