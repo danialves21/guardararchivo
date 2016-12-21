@@ -21,15 +21,17 @@ $PAGE->set_heading($title);
 echo $OUTPUT->header();
 $action = optional_param('action','viewfiles',PARAM_TEXT);
 
-$mform = new guardararchivo_subirarchivo_form();
+if ($action == 'viewfiles') {
+	$url_add = new moodle_url('/local/guardararchivo/index.php', array('action'=> 'addfiles'));
+	echo html_writer::nonempty_tag("div", $OUTPUT->single_button($url_add,'Subir nuevo archivo'), array("align" => "middle"));
+}
 
 if ($action == 'addfiles') {
+	$mform = new guardararchivo_subirarchivo_form();
 	if ($mform->is_cancelled()) { //si se presiona boton cancelar
 		$home = new moodle_url('/my/');
 		redirect($home);
 	} else if ($mform->get_data()) { //se procesan datos validados
-		require_capability('local/guardararchivo:upload', $context);
-	
 		$data = $mform->get_data();
 	
 		$path = $CFG->dataroot. "/temp/local/guardararchivo";
@@ -61,18 +63,12 @@ if ($action == 'addfiles') {
 				
 		//Información del nuevo archivo
 		$fileinfo = $fs->create_file_from_pathname($file_record, $uploadfile);
-	
-		//Se cambia valor al action
-		$action = 'viewfiles';
-	}
-}
 
+	}
+} 
 //Muestra el formulario
 if ($action == 'addfiles') {
 	$mform->display();
-} else if ($action == 'viewfiles') {
-	echo "hola moodle";//solo prueba
-	$this->add_action_buttons(null,'Subir nuevo archivo');
 }
 
 //Siempre al final
