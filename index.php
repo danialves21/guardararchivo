@@ -71,7 +71,7 @@ if ($action == 'addfiles') {
 if ($action == 'addfiles') {
 	$mform->display();
 } else if ($action == 'viewfiles') {
-	echo "hola moodle";
+	echo "hola moodle";//solo prueba
 	$this->add_action_buttons(null,'Subir nuevo archivo');
 }
 
