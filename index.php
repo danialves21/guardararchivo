@@ -102,10 +102,10 @@ if ($action == "viewfiles") {
 	$newtable->head = array("Archivo","Fecha de subida", "Fecha de edición", "Compartido", "Descargado");
 	//Sacar datos base de datos
 	$results = $DB->get_records_sql('SELECT * FROM {guardararchivo_archivo} WHERE iduser = ?', array($USER->id));
-	//URL archivo
-	$file_url = moodle_url::make_pluginfile_url($context->id, "local_guardararchivo", "draft", 0, "/", $datos["namearchive"]);
 	// llenar tabla
 	foreach ($results as $rec) {
+		//URL archivo
+		$file_url = moodle_url::make_pluginfile_url($context->id, "local_guardararchivo", "draft", 0, "/", $rec->namearchive);
 		$newtable->data[] = array(
 								html_writer::nonempty_tag("a", $rec->namearchive, array("src" => $file_url)),
 								date("F j, Y, g:i a", $rec->uploaddate), 
@@ -114,6 +114,7 @@ if ($action == "viewfiles") {
 								$rec->downloaded
 						   );
 	}
+	echo $contador;
 }
 
 
@@ -135,9 +136,9 @@ echo $OUTPUT->footer();
 ?>
 
 <script>
-$(document).ready(function() {
-	$(".print").on("click", function() {
-		var w = window.open('<?php echo $file_url; ?>');
+$( document ).ready(function() {
+	$( ".print" ).on( "click", function() {
+		var w = window.open('<?php echo $file_url ;?>');
 		w.print();
 	});
 });
