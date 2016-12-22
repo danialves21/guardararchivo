@@ -48,6 +48,7 @@ if ($action == "addfiles") {
 		//validar que se subió bien el archivo
 		$uploadfile = $path . "/unread/".$data->filename.".".$extension;
 		
+		//Obtener el archivo
 		$fs = get_file_storage();
 		
 		//Datos del archivo
@@ -56,7 +57,7 @@ if ($action == "addfiles") {
 						"component" => "local_guardararchivo",
 						"filearea" => "draft",
 						"itemid" => 0,
-						"filepath" => $path."/unread/",
+						"filepath" => "/",
 						"filename" => $data->filename.".".$extension,
 						"timecreated" => time(),
 						"timemodified" => time(),
@@ -83,11 +84,10 @@ if ($action == "addfiles") {
 				"shared" => 0, 
 				"downloaded" => 0, 
 				"path" => $file_record["filepath"], 
-				"iduser" => $file_record["userid"]
-				
+				"iduser" => $file_record["userid"]		
 		);
-		//echo date("F j, Y, g:i a",$datos["uploaddate"]);
 		//$DB->insert_record('guardararchivo_archivo', $datos);
+		
 		//Cambiar valor de action
 		$action ="viewfiles";
 	}
@@ -101,11 +101,21 @@ if ($action == "viewfiles") {
 	//Crea titulos tabla
 	$newtable->head = array("Archivo","Fecha de subida", "Fecha de edición", "Compartido", "Descargado");
 	//Sacar datos base de datos
-	$DB->get_records_sql('SELECT g.namearchive, g.editiondate, g.uploaddate, g.shared, g.downloaded FROM {guardararchivo_archivo} AS g WHERE g.iduser = ?', array($USER->id));
-
+	$results = $DB->get_records_sql('SELECT * FROM {guardararchivo_archivo} WHERE iduser = ?', array($USER->id));
+	//URL archivo
+	$file_url = moodle_url::make_pluginfile_url($context->id, "local_guardararchivo", "draft", 0, "/", $datos["namearchive"]);
 	// llenar tabla
-	
+	foreach ($results as $rec) {
+		$newtable->data[] = array(
+								html_writer::nonempty_tag("a", $rec->namearchive, array("src" => $file_url)),
+								date("F j, Y, g:i a", $rec->uploaddate), 
+								date("F j, Y, g:i a", $rec->editiondate), 
+								$rec->shared, 
+								$rec->downloaded
+						   );
+	}
 }
+
 
 echo $OUTPUT->header();
 
@@ -113,13 +123,22 @@ if ($action == "viewfiles") {
 	//Muestra tabla
 	echo html_writer::table($newtable);
 	//botón
-	echo $OUTPUT->single_button($url_add,"Subir nuevo archivo");
+	echo html_writer::nonempty_tag("div",$OUTPUT->single_button($url_add,"Subir nuevo archivo"),array("align" => "middle"));
 }
 //Muestra el formulario
 if ($action == "addfiles") {
 	$mform->display();
 }
 
-
 //Siempre al final
 echo $OUTPUT->footer();
+?>
+
+<script>
+$(document).ready(function() {
+	$(".print").on("click", function() {
+		var w = window.open('<?php echo $file_url; ?>');
+		w.print();
+	});
+});
+</script>
