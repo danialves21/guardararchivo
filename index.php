@@ -2,10 +2,12 @@
 // Funciones
 require_once(dirname(__FILE__) . '/../../config.php');
 require_once($CFG->dirroot . "/local/guardararchivo/forms/guardararchivo_form.php");
+require_once($CFG->dirroot . "/local/guardararchivo/forms/compartirarchivo_form.php");
 require_once ($CFG->dirroot . "/repository/lib.php");
 global $PAGE, $CFG, $OUTPUT, $DB, $USER;
 
 $action = optional_param("action","viewfiles",PARAM_TEXT);
+$edit = optional_param("edit", null, PARAM_INT);
 
 
 require_login();
@@ -86,7 +88,7 @@ if ($action == "addfiles") {
 				"path" => $file_record["filepath"], 
 				"iduser" => $file_record["userid"]		
 		);
-		//$DB->insert_record('guardararchivo_archivo', $datos);
+		$DB->insert_record('guardararchivo_archivo', $datos);
 		
 		//Cambiar valor de action
 		$action ="viewfiles";
@@ -95,28 +97,45 @@ if ($action == "addfiles") {
 
 
 if ($action == "viewfiles") {
+	//Sacar datos base de datos
+	$results = $DB->get_records_sql('SELECT * FROM {guardararchivo_archivo} WHERE iduser = ?', array($USER->id));
+	$fileid = $rec->id;
+	//URL's
 	$url_add = new moodle_url("/local/guardararchivo/index.php", array("action" => "addfiles"));
+	$url_share = new moodle_url("/local/guardararchivo/index.php", array("action" => "sharefile"));
 	//Crea tabla
 	$newtable = new html_table();
 	//Crea titulos tabla
 	$newtable->head = array("Archivo","Fecha de subida", "Fecha de edición", "Compartido", "Descargado");
-	//Sacar datos base de datos
-	$results = $DB->get_records_sql('SELECT * FROM {guardararchivo_archivo} WHERE iduser = ?', array($USER->id));
 	// llenar tabla
 	foreach ($results as $rec) {
-		//URL archivo
-		$file_url = moodle_url::make_pluginfile_url($context->id, "local_guardararchivo", "draft", 0, "/", $rec->namearchive);
+		$nombres = $rec->namearchive;
+		$file_url = moodle_url::make_pluginfile_url($context->id, "local_guardararchivo", "draft", 0, "/", $nombres);
 		$newtable->data[] = array(
-								html_writer::nonempty_tag("a", $rec->namearchive, array("src" => $file_url)),
+								$rec->namearchive,
 								date("F j, Y, g:i a", $rec->uploaddate), 
 								date("F j, Y, g:i a", $rec->editiondate), 
 								$rec->shared, 
-								$rec->downloaded
-						   );
+								$rec->downloaded,
+								$OUTPUT->action_icon($file_url, new pix_icon('i/down', "Descargar")),
+								$OUTPUT->action_icon("", new pix_icon('i/edit', "Editar")),
+								$OUTPUT->action_icon($url_share, new pix_icon('i/email', "Compartir")),
+								html_writer::nonempty_tag("div",$OUTPUT->action_icon("", new pix_icon('i/delete', "Borrar")), array("style" => "height:27px; width:27px"))
+						   	);
 	}
-	echo $contador;
 }
 
+if($action == "sharefile") {
+	$shareform = new guardararchivo_compartirarchivo_form();
+	
+	if ($shareform->is_cancelled()) { //si se presiona boton cancelar
+		redirect($home);
+	} else if ($shareform->get_data()) {
+		$data_share = $shareform->get_data();
+		
+		
+	}
+}
 
 echo $OUTPUT->header();
 
@@ -130,16 +149,8 @@ if ($action == "viewfiles") {
 if ($action == "addfiles") {
 	$mform->display();
 }
-
+if ($action == "sharefile") {
+	$shareform->display();
+}
 //Siempre al final
 echo $OUTPUT->footer();
-?>
-
-<script>
-$( document ).ready(function() {
-	$( ".print" ).on( "click", function() {
-		var w = window.open('<?php echo $file_url ;?>');
-		w.print();
-	});
-});
-</script>
