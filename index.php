@@ -7,7 +7,8 @@ require_once ($CFG->dirroot . "/repository/lib.php");
 global $PAGE, $CFG, $OUTPUT, $DB, $USER;
 
 $action = optional_param("action","viewfiles",PARAM_TEXT);
-$edit = optional_param("edit", null, PARAM_INT);
+$id = optional_param("id", null, PARAM_INT);
+$status = optional_param("status", 1, PARAM_INT);
 
 
 require_login();
@@ -96,21 +97,54 @@ if ($action == "addfiles") {
 }
 
 
+if($action == "deletefile") {
+	if ($id == null) {
+		echo $OUTPUT->error_text("No existe el archivo que a eliminar");
+		$action = "viewfiles";
+	} else {
+		$delete = new stdClass();
+		$delete->id = $id;
+		$delete->status = 0;
+
+		$DB->update_record('guardararchivo_archivo', $delete);
+		$action = "viewfiles";
+
+	}
+}
+
+if($action == "sharefile") {
+	$shareform = new guardararchivo_compartirarchivo_form();
+
+	if ($shareform->is_cancelled()) { //si se presiona boton cancelar
+		$home = new moodle_url("/local/guardararchivo/index.php", array("action" => "viewfiles"));
+		redirect($home);
+	} else if ($shareform->get_data()) {
+		$data_share = $shareform->get_data();
+
+		$email = $data_share->email;
+		$asunto = $data_share->asunto;
+		$mensaje = $data_share->mensaje;
+	}
+}
+
 if ($action == "viewfiles") {
 	//Sacar datos base de datos
-	$results = $DB->get_records_sql('SELECT * FROM {guardararchivo_archivo} WHERE iduser = ?', array($USER->id));
-	$fileid = $rec->id;
-	//URL's
+	$results = $DB->get_records_sql('SELECT * FROM {guardararchivo_archivo} WHERE iduser = ? AND status = ?', array($USER->id, $status));
+	
+	//URL
 	$url_add = new moodle_url("/local/guardararchivo/index.php", array("action" => "addfiles"));
-	$url_share = new moodle_url("/local/guardararchivo/index.php", array("action" => "sharefile"));
 	//Crea tabla
 	$newtable = new html_table();
 	//Crea titulos tabla
 	$newtable->head = array("Archivo","Fecha de subida", "Fecha de edición", "Compartido", "Descargado");
 	// llenar tabla
 	foreach ($results as $rec) {
+		$fileid = $rec->id;
+		$url_share = new moodle_url("/local/guardararchivo/index.php", array("action" => "sharefile", "id" => $fileid));
+		$url_delete = new moodle_url("/local/guardararchivo/index.php", array("action" => "deletefile", "id" => $fileid));
 		$nombres = $rec->namearchive;
 		$file_url = moodle_url::make_pluginfile_url($context->id, "local_guardararchivo", "draft", 0, "/", $nombres);
+		
 		$newtable->data[] = array(
 								$rec->namearchive,
 								date("F j, Y, g:i a", $rec->uploaddate), 
@@ -120,20 +154,8 @@ if ($action == "viewfiles") {
 								$OUTPUT->action_icon($file_url, new pix_icon('i/down', "Descargar")),
 								$OUTPUT->action_icon("", new pix_icon('i/edit', "Editar")),
 								$OUTPUT->action_icon($url_share, new pix_icon('i/email', "Compartir")),
-								html_writer::nonempty_tag("div",$OUTPUT->action_icon("", new pix_icon('i/delete', "Borrar")), array("style" => "height:27px; width:27px"))
-						   	);
-	}
-}
-
-if($action == "sharefile") {
-	$shareform = new guardararchivo_compartirarchivo_form();
-	
-	if ($shareform->is_cancelled()) { //si se presiona boton cancelar
-		redirect($home);
-	} else if ($shareform->get_data()) {
-		$data_share = $shareform->get_data();
-		
-		
+								html_writer::nonempty_tag("div",$OUTPUT->action_icon($url_delete, new pix_icon('i/delete', "Borrar"),  new confirm_action("¿Estás seguro que quieres eliminar este archivo?")), array("style" => "height:27px; width:27px"))
+						   	); 
 	}
 }
 
