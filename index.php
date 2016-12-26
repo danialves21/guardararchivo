@@ -1,5 +1,5 @@
 <?php
-// Funciones
+// Functions
 require_once(dirname(__FILE__) . '/../../config.php');
 require_once($CFG->dirroot . "/local/guardararchivo/forms/guardararchivo_form.php");
 require_once($CFG->dirroot . "/local/guardararchivo/forms/compartirarchivo_form.php");
@@ -16,7 +16,7 @@ if (isguestuser()) {
 	die();
 }
 
-// Construcción de la pagina en formato moodle (siempre al inicio)
+// Building moodle page (always at the beggining)
 $url = new moodle_url("/local/guardararchivo/index.php");
 $context = context_system::instance();
 $PAGE->set_context($context);
@@ -32,32 +32,32 @@ $PAGE->set_heading($title);
 if ($action == "addfiles") {
 	$mform = new guardararchivo_subirarchivo_form();
 	
-	if ($mform->is_cancelled()) { //si se presiona boton cancelar
+	if ($mform->is_cancelled()) { //If cancel button is pressed
 		$home = new moodle_url("/local/guardararchivo/index.php", array("action" => "viewfiles"));
 		redirect($home);
-	} else if ($mform->get_data()) { //se procesan datos validados
+	} else if ($mform->get_data()) { //data process
 		$data = $mform->get_data();
 	
 		$path = $CFG->dataroot. "/temp/local/guardararchivo";
 		if(!file_exists($path . "/unread/")) {
 			mkdir($path . "/unread/", 0777, true);
 		}
-		//Obtener información de extensión
+		//Get file extension
 		$filename = $mform->get_new_filename("userfile");
 		$expldeo = explode(".",$filename);
 		$totalexp = count($expldeo);
 		$extension = $expldeo[$totalexp-1];
 		
-		//Guardar archivo con nuevo nombre
+		//Save file with new name
 		$file = $mform->save_file("userfile", $path."/unread/".$data->filename.".".$extension,false);
 		
-		//validar que se subió bien el archivo
+		//Validate that file is up correctly
 		$uploadfile = $path . "/unread/".$data->filename.".".$extension;
 		
-		//Obtener el archivo
+		//Get the file
 		$fs = get_file_storage();
 		
-		//Datos del archivo
+		//File info
 		$file_record = array(
 						"contextid" => $context->id,
 						"component" => "local_guardararchivo",
@@ -72,16 +72,16 @@ if ($action == "addfiles") {
 						"license" => "allrightsreserved"
 		);
 		
-		//Si el archivo ya existe, se elimina
+		//If the file exists, is deleted
 		if ($fs->file_exists($context->id,"local_guardararchivo", "draft", 0, "/", $data->filename.".".$extension)) {
 			$previousfile = $fs->get_file($context->id, "local_guardararchivo", "draft", 0, "/", $data->filename.".".$extension);
 			$previousfile->delete();
 		}
 		
-		//Información del nuevo archivo
+		//Info of the new file
 		$fileinfo = $fs->create_file_from_pathname($file_record, $uploadfile);	
 		
-		//Insertar en mdl_guardararchivo nombre archivo y user id
+		//Isert on mdl_guardararchivo file name and user id
 		$datos = array(
 				"namearchive" => $file_record["filename"], 
 				"editiondate" => $file_record["timemodified"], 
@@ -94,7 +94,7 @@ if ($action == "addfiles") {
 		);
 		$DB->insert_record('guardararchivo_archivo', $datos);
 		
-		//Cambiar valor de action
+		//change action value
 		$action ="viewfiles";
 	}
 }
@@ -118,7 +118,7 @@ if($action == "deletefile") {
 if($action == "sharefile") {
 	$shareform = new guardararchivo_compartirarchivo_form();
 
-	if ($shareform->is_cancelled()) { //si se presiona boton cancelar
+	if ($shareform->is_cancelled()) { //If the cancel button is pressed
 		$home = new moodle_url("/local/guardararchivo/index.php", array("action" => "viewfiles"));
 		redirect($home);
 	} else if ($shareform->get_data()) {
@@ -131,16 +131,16 @@ if($action == "sharefile") {
 }
 
 if ($action == "viewfiles") {
-	//Sacar datos base de datos
+	//Get data from db
 	$results = $DB->get_records_sql('SELECT * FROM {guardararchivo_archivo} WHERE iduser = ? AND status = ?', array($USER->id, $status));
 	
 	//URL
 	$url_add = new moodle_url("/local/guardararchivo/index.php", array("action" => "addfiles"));
-	//Crea tabla
+	//Create table
 	$newtable = new html_table();
-	//Crea titulos tabla
+	//Create headers of table
 	$newtable->head = array("Archivo","Fecha de subida", "Compartido", "Descargado");
-	// llenar tabla
+	// Fill table
 	foreach ($results as $rec) {
 		$fileid = $rec->id;
 		$url_share = new moodle_url("/local/guardararchivo/index.php", array("action" => "sharefile", "fileid" => $fileid));
@@ -164,12 +164,12 @@ if ($action == "viewfiles") {
 echo $OUTPUT->header();
 
 if ($action == "viewfiles") {
-	//Muestra tabla
+	//Shows table
 	echo html_writer::table($newtable);
-	//botón
+	//Button
 	echo html_writer::nonempty_tag("div",$OUTPUT->single_button($url_add,"Subir nuevo archivo"),array("align" => "middle"));
 }
-//Muestra el formulario
+//Shows the form
 if ($action == "addfiles") {
 	$mform->display();
 }
@@ -177,7 +177,7 @@ if ($action == "sharefile") {
 	$shareform->display();
 }
  
-//Siempre al final
+//Always at the end
 echo $OUTPUT->footer();
 
 ?>
@@ -190,7 +190,7 @@ echo $OUTPUT->footer();
 				type: "POST",
 				url:"updatefiles.php",
 				dataType: "json",
-				data: {'fileid' : w, 'userid' : u}
+				data: {'fileid' : w}
 			});
 		});
 	});
