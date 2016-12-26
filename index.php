@@ -179,18 +179,7 @@ if ($action == "sharefile") {
  
 //Siempre al final
 echo $OUTPUT->footer();
-/*
- 		'<?php
-			echo $downloads = $downloads++;
 
-			echo $descarga = new stdClass();
-			echo $descarga->'id' = $id;
-			echo $descarga->'downloaded' = $downloads;
-
-			echo $DB->update_record('guardararchivo_archivo', $descarga);
-			echo $action = 'viewfiles';
-			?>'
- */
 ?>
 <script>
 	$(document).ready(function() {
@@ -199,8 +188,9 @@ echo $OUTPUT->footer();
 
 			$.ajax({
 				type: "POST",
-				url:'updatefiles.php',
-				data: {fileid : w}
+				url:"updatefiles.php",
+				dataType: "json",
+				data: {'fileid' : w, 'userid' : u}
 			});
 		});
 	});
