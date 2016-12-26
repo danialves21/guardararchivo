@@ -7,7 +7,7 @@ require_once ($CFG->dirroot . "/repository/lib.php");
 global $PAGE, $CFG, $OUTPUT, $DB, $USER;
 
 $action = optional_param("action","viewfiles",PARAM_TEXT);
-$id = optional_param("id", null, PARAM_INT);
+$id = optional_param("fileid", null, PARAM_INT);
 $status = optional_param("status", 1, PARAM_INT);
 
 
@@ -20,6 +20,9 @@ if (isguestuser()) {
 $url = new moodle_url("/local/guardararchivo/index.php");
 $context = context_system::instance();
 $PAGE->set_context($context);
+$PAGE->requires->jquery();
+$PAGE->requires->jquery_plugin ( 'ui' );
+$PAGE->requires->jquery_plugin ( 'ui-css' );
 $PAGE->set_url($url);
 $PAGE->set_pagelayout("standard");
 $title = "Subir un archivo";
@@ -136,22 +139,21 @@ if ($action == "viewfiles") {
 	//Crea tabla
 	$newtable = new html_table();
 	//Crea titulos tabla
-	$newtable->head = array("Archivo","Fecha de subida", "Fecha de edición", "Compartido", "Descargado");
+	$newtable->head = array("Archivo","Fecha de subida", "Compartido", "Descargado");
 	// llenar tabla
 	foreach ($results as $rec) {
 		$fileid = $rec->id;
-		$url_share = new moodle_url("/local/guardararchivo/index.php", array("action" => "sharefile", "id" => $fileid));
-		$url_delete = new moodle_url("/local/guardararchivo/index.php", array("action" => "deletefile", "id" => $fileid));
+		$url_share = new moodle_url("/local/guardararchivo/index.php", array("action" => "sharefile", "fileid" => $fileid));
+		$url_delete = new moodle_url("/local/guardararchivo/index.php", array("action" => "deletefile", "fileid" => $fileid));
 		$nombres = $rec->namearchive;
 		$file_url = moodle_url::make_pluginfile_url($context->id, "local_guardararchivo", "draft", 0, "/", $nombres);
 		
 		$newtable->data[] = array(
 								$rec->namearchive,
 								date("F j, Y, g:i a", $rec->uploaddate), 
-								date("F j, Y, g:i a", $rec->editiondate), 
 								$rec->shared, 
 								$rec->downloaded,
-								$OUTPUT->action_icon($file_url, new pix_icon('i/down', "Descargar")),
+								html_writer::nonempty_tag("div",$OUTPUT->action_icon($file_url, new pix_icon('i/down', "Descargar")), array("class" => "descargar", "fileid" => $fileid)),
 								$OUTPUT->action_icon("", new pix_icon('i/edit', "Editar")),
 								$OUTPUT->action_icon($url_share, new pix_icon('i/email', "Compartir")),
 								html_writer::nonempty_tag("div",$OUTPUT->action_icon($url_delete, new pix_icon('i/delete', "Borrar"),  new confirm_action("¿Estás seguro que quieres eliminar este archivo?")), array("style" => "height:27px; width:27px"))
@@ -174,5 +176,32 @@ if ($action == "addfiles") {
 if ($action == "sharefile") {
 	$shareform->display();
 }
+ 
 //Siempre al final
 echo $OUTPUT->footer();
+/*
+ 		'<?php
+			echo $downloads = $downloads++;
+
+			echo $descarga = new stdClass();
+			echo $descarga->'id' = $id;
+			echo $descarga->'downloaded' = $downloads;
+
+			echo $DB->update_record('guardararchivo_archivo', $descarga);
+			echo $action = 'viewfiles';
+			?>'
+ */
+?>
+<script>
+	$(document).ready(function() {
+		$(".descargar").on("click", function() {
+			var w = $(this).attr("fileid");
+
+			$.ajax({
+				type: "POST",
+				url:'updatefiles.php',
+				data: {fileid : w}
+			});
+		});
+	});
+</script>
